@@ -5,68 +5,73 @@
 
 /*Funções de exibição*/
 
-void insereTraco(int qtd,int quebraLinha);
-void clear();
-void exibeTitulo();
-
-FILE *arquivo;
-
    typedef struct {
+        int chave_primaria;
         char descricao[100];
         int quantidade;
         float valorCompra;
         float valorVenda;
     } PRODUTO;
 
+void selectLinha(FILE *arquivo,PRODUTO *produto);
+void insereTraco(int qtd,int quebraLinha);
+void clear();
+void exibeTitulo();
+void escolhaMenu();
+int  geraChavePrimaria();
+void selectAll(int mostraMenu);
+void gravaProduto(FILE *arquivo, PRODUTO *produto,int geraChavePrimaria);
+
+char nome_arquivo[13] = "produtos.txt"; 
+
+FILE *arquivo;
+
 void insert()
 {
     int continua =1;
-    int tamanhoArray = 0;
-
-    PRODUTO *produto = (PRODUTO*)malloc(sizeof(PRODUTO));
 
     while(continua != 2)
     {
+        PRODUTO produto;
 
-    printf("\nINSERÇÃO DE PRODUTOS\n");
-    insereTraco(20,1);
+        printf("\nINSERÇÃO DE PRODUTOS\n");
+        insereTraco(20,1);
+    
+        printf("DESCRIÇÃO (máx 100 caracteres): \t");
+        scanf(" %[^\n]",produto.descricao);
+        setbuf(stdout, 0);
+        fflush(stdout);
 
-    printf("DESCRIÇÃO (máx 100 caracteres): \t");
-    scanf("%s",&produto[tamanhoArray].descricao);
+        printf("QUANTIDADE: \t");
+        scanf("%d",&produto.quantidade);
 
-    printf("QUANTIDADE: \t");
-    scanf("%d",&produto[tamanhoArray].quantidade);
+        printf("VALOR COMPRA (R$) \t");
+        scanf("%f",&produto.valorCompra);
 
-    printf("VALOR COMPRA (R$) \t");
-    scanf("%f",&produto[tamanhoArray].valorCompra);
+        printf("VALOR VENDA (R$) \t");
+        scanf("%f",&produto.valorVenda);
 
-    printf("VALOR VENDA (R$) \t");
-    scanf("%f",&produto[tamanhoArray].valorVenda);
 
-    tamanhoArray++;
-    produto = (PRODUTO*) realloc(produto,tamanhoArray);
-  
-    insereTraco(20,1);
-    printf("Continuar cadastrando?\n 1\t SIM\n 2 \t NÃO\n");
-    scanf("%d",&continua);
+        arquivo =  fopen(nome_arquivo,"a+");
 
+        gravaProduto(arquivo,&produto,1);
+
+        insereTraco(20,1);
+        printf("Continuar cadastrando?\n 1\t SIM\n 2 \t NÃO\n");
+        scanf("%d",&continua);
+
+        fclose(arquivo);
     }
-
-    arquivo = fopen("produtos.txt","a+");
-  
-    for (int i=0;i<tamanhoArray;i++)
-    {
-        if (i==tamanhoArray-1)
-        fprintf(arquivo,"%s %d %.2f %.2f",produto[i].descricao,produto[i].quantidade,produto[i].valorCompra,produto[i].valorVenda);
-        else
-         fprintf(arquivo,"%s %d %.2f %.2f\n",produto[i].descricao,produto[i].quantidade,produto[i].valorCompra,produto[i].valorVenda);
-
-        fflush(arquivo);
-    }
-
-    fclose(arquivo);
 
     escolhaMenu();
+}
+
+void gravaProduto(FILE *arquivo, PRODUTO *produto,int gerarChavePrimaria)
+{
+    
+    int chavaPrimaria = geraChavePrimaria();
+    fprintf(arquivo,"%d; %s; %d; %.2f; %.2f\n",gerarChavePrimaria?chavaPrimaria:produto->chave_primaria,produto->descricao,produto->quantidade,produto->valorCompra,produto->valorVenda);
+    fflush(arquivo);
 }
 
 void update()
@@ -77,29 +82,77 @@ void update()
 void delete()
 {
     exibeTitulo();
-}
+
+    int idProduto;
+    int tamanhoArray = 0;
+    PRODUTO *produtos = (PRODUTO*)malloc(sizeof(PRODUTO));
+    PRODUTO produto;
+
+    selectAll(0);
+    printf("INSIRA O ID DO PRODUTO QUE DESEJA EXCLUIR: \t");
+    scanf("%d",&idProduto);
+    insereTraco(20,1);
+
+    arquivo = fopen(nome_arquivo,"r");
+
+    while(!feof(arquivo))
+    {
+       PRODUTO produto;
+       selectLinha(arquivo,&produto);
+       produtos[tamanhoArray] = produto;
+       tamanhoArray++;
+       produtos = (PRODUTO*) realloc(produtos,tamanhoArray);
+    } 
+
+        
+    fclose(arquivo);
+
+    arquivo = fopen(nome_arquivo,"w");
+     for (int i=0;i<tamanhoArray;i++)
+     {
+         produto = produtos[i];
+
+         if (produto.chave_primaria != idProduto)
+         {
+              printf("id: %d",produto.chave_primaria);
+              gravaProduto(arquivo,&produto,0);
+         }
+     }  
+
+      fclose(arquivo); 
+
+    selectAll(1);
+
+}    
+    
 
 void selectWith()
 {
     exibeTitulo();
 }
-void selectAll()
+
+void selectAll(int mostraMenu)
 {
-    arquivo = fopen("produtos.txt","r");
+    arquivo = fopen(nome_arquivo,"r");
     int qtdProduto = 1;
     PRODUTO produto;
 
      while(!feof(arquivo))
      {
-     fscanf(arquivo,"%s %d %f %f",produto.descricao,&produto.quantidade,&produto.valorCompra,&produto.valorVenda);
-     
+    
+     selectLinha(arquivo,&produto);
+    
      printf("\nProduto %d\n",qtdProduto);
+ 
      insereTraco(20,1);
 
+    printf("ID: %d\nDescrição: %s \nQuantidade: %d\nValor compra: %.2f\nValor venda: %.2f\n", produto.chave_primaria,produto.descricao,produto.quantidade,produto.valorCompra,produto.valorVenda);
      qtdProduto++;
 
-     printf("Descrição: %s\nQuantidade: %d\nValor compra: %.2f\nValor venda: %.2f\n",produto.descricao,produto.quantidade,produto.valorCompra,produto.valorVenda);
      }
+
+    if (mostraMenu)
+        escolhaMenu();
 
     fclose(arquivo);
     
@@ -133,7 +186,7 @@ void escolhaMenu(void)
         case 2: delete();break;
         case 3: update();break;
         case 4: selectWith();break;
-        case 5: selectAll();break;
+        case 5: selectAll(1);break;
         default: exit(0);
     }
 }
@@ -178,4 +231,63 @@ void exibeTitulo()
     insereTraco(38,1);
     printf("SISTEMA DE GERENCIAMENTO PARA ESTOQUE\n");
     insereTraco(38,1);
+}
+
+int quantidadeDeLinhas()
+{
+    arquivo = fopen(nome_arquivo,"r");
+    int qtdLinha; 
+
+     while(!feof(arquivo))
+     {
+         if (fgetc(arquivo) == '\n')
+            qtdLinha ++;
+     }
+
+     return  qtdLinha + 1;
+}
+
+int tamanhoArquivo(const char* file_name)
+{
+    FILE *file = fopen(file_name, "r");
+
+    if(file == NULL)
+        return 0;
+
+    fseek(file, 0, SEEK_END);
+    int size = ftell(file);
+    fclose(file);
+
+    return size;
+
+    fclose(file);
+}
+
+
+void selectLinha(FILE *arquivo,PRODUTO *produto)
+{
+    fscanf(arquivo, "%d;%[^;];%d;%f;%f\n",&produto->chave_primaria,&produto->descricao,&produto->quantidade,&produto->valorCompra,&produto->valorVenda);
+}
+
+int geraChavePrimaria()
+{
+    PRODUTO produto;
+    FILE * arquivo;
+    
+    arquivo = fopen(nome_arquivo,"r");
+
+    if (tamanhoArquivo(nome_arquivo) == 0)
+    {
+        return 1;
+    }
+
+     while(!feof(arquivo))
+     {
+       selectLinha(arquivo, &produto);
+     }
+
+    fclose(arquivo);
+
+    return produto.chave_primaria + 1;
+
 }
