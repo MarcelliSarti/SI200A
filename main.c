@@ -21,6 +21,7 @@ void escolhaMenu();
 int  geraChavePrimaria();
 void selectAll(int mostraMenu);
 void gravaProduto(FILE *arquivo, PRODUTO *produto,int geraChavePrimaria);
+void buscaProdutoId(int id,PRODUTO *produto);
 
 char nome_arquivo[13] = "produtos.txt"; 
 
@@ -51,7 +52,6 @@ void insert()
         printf("VALOR VENDA (R$) \t");
         scanf("%f",&produto.valorVenda);
 
-
         arquivo =  fopen(nome_arquivo,"a+");
 
         gravaProduto(arquivo,&produto,1);
@@ -68,76 +68,153 @@ void insert()
 
 void gravaProduto(FILE *arquivo, PRODUTO *produto,int gerarChavePrimaria)
 {
-    
-    int chavaPrimaria = geraChavePrimaria();
-    fprintf(arquivo,"%d; %s; %d; %.2f; %.2f\n",gerarChavePrimaria?chavaPrimaria:produto->chave_primaria,produto->descricao,produto->quantidade,produto->valorCompra,produto->valorVenda);
+    int chavaPrimaria;
+    if (gerarChavePrimaria)
+    chavaPrimaria = geraChavePrimaria();
+    else 
+    chavaPrimaria = produto->chave_primaria;
+
+    fprintf(arquivo,"%d; %s; %d; %.2f; %.2f\n",chavaPrimaria,produto->descricao,produto->quantidade,produto->valorCompra,produto->valorVenda);
     fflush(arquivo);
 }
 
 void update()
 {
+    int idProduto, opcao;
+    PRODUTO produto;
     exibeTitulo();
+    selectAll(0);
+    printf("\n\n\nINSIRA O ID DO PRODUTO QUE SEJA ALTERAR: \t");
+    scanf("%d",&idProduto);
+    printf("\nINFORMAÇÃO QUE SERÁ ATUALIZADA\n");
+    insereTraco(20,1);
+    printf("1- DESCRIÇÃO\n2- VALOR DE COMPRA\n3- VALOR DE VENDA\n4- QUANTIDADE\n");
+    scanf("%d",&opcao);
+
+    buscaProdutoId(idProduto,&produto);
+
+    if (opcao == 1)
+    {
+        printf("Nova descrição:\t");
+        scanf(" %[^\n]",produto.descricao);
+    }
+
+    else if (opcao ==2)
+    {
+        printf("Novo valor de compra:\t");
+        scanf("%f",&produto.valorCompra);
+    }
+
+    else  if (opcao ==3)
+    {
+        printf("Novo valor de venda:\t");
+        scanf("%f",&produto.valorVenda);
+    }
+        
+    else if (opcao == 4)
+    {
+        printf("Nova quantidade:\t");
+        scanf("%d",&produto.quantidade);
+    }
+
+
+    delete(idProduto);
+   
+    arquivo = fopen(nome_arquivo,"a+");
+    gravaProduto(arquivo,&produto,0);
+    fclose(arquivo);
+    insereTraco(20,1);
+    printf("PRODUTO ATUALIZADO\n");
+    insereTraco(20,1);
+    printf("ID: %d\nDescrição: %s \nQuantidade: %d\nValor compra: %.2f\nValor venda: %.2f\n", produto.chave_primaria,produto.descricao,produto.quantidade,produto.valorCompra,produto.valorVenda);
+
+    escolhaMenu();
 }
 
-void delete()
+void delete(int id)
 {
     exibeTitulo();
 
-    int idProduto;
+    int idProduto = id;
     int tamanhoArray = 0;
-    PRODUTO *produtos = (PRODUTO*)malloc(sizeof(PRODUTO));
+    PRODUTO *produtos = (PRODUTO*)calloc(0,sizeof(PRODUTO));
     PRODUTO produto;
 
-    selectAll(0);
-    printf("INSIRA O ID DO PRODUTO QUE DESEJA EXCLUIR: \t");
-    scanf("%d",&idProduto);
-    insereTraco(20,1);
+    if (id == 0)
+    {
+        selectAll(0);
+        printf("INSIRA O ID DO PRODUTO QUE DESEJA EXCLUIR: \t");
+        scanf("%d",&idProduto);
+        insereTraco(20,1);
+    }
 
-    arquivo = fopen(nome_arquivo,"r");
+    arquivo = fopen(nome_arquivo,"r+");
 
     while(!feof(arquivo))
     {
        PRODUTO produto;
        selectLinha(arquivo,&produto);
-       produtos[tamanhoArray] = produto;
        tamanhoArray++;
-       produtos = (PRODUTO*) realloc(produtos,tamanhoArray);
+       produtos = (PRODUTO*) realloc(produtos, tamanhoArray*sizeof(PRODUTO));
+       produtos[tamanhoArray-1] = produto;
     } 
 
         
     fclose(arquivo);
 
-    arquivo = fopen(nome_arquivo,"w");
+    arquivo = fopen(nome_arquivo,"w+");
      for (int i=0;i<tamanhoArray;i++)
      {
          produto = produtos[i];
 
          if (produto.chave_primaria != idProduto)
          {
-              printf("id: %d",produto.chave_primaria);
               gravaProduto(arquivo,&produto,0);
          }
      }  
 
       fclose(arquivo); 
 
+    if (id == 0)
     selectAll(1);
 
 }    
     
-
+//Falta implementação - Busca com filtro
 void selectWith()
 {
     exibeTitulo();
+
 }
 
+void buscaProdutoId(int id,PRODUTO *produto)
+{
+    PRODUTO produtoLocal;  
+    arquivo = fopen(nome_arquivo,"r+");
+    while(!feof(arquivo))
+    {
+    selectLinha(arquivo,&produtoLocal);
+    if (produtoLocal.chave_primaria == id)
+       break;
+    }
+    fclose(arquivo); 
+    *produto = produtoLocal;
+}
 void selectAll(int mostraMenu)
 {
     arquivo = fopen(nome_arquivo,"r");
     int qtdProduto = 1;
     PRODUTO produto;
 
-     while(!feof(arquivo))
+if (tamanhoArquivo(nome_arquivo) == 0)
+{
+    
+    printf("\n\nALERTA: ARQUIVO VAZIO. INSIRA INFORMAÇÕES NO MENU ABAIXO\a\n\n\n"); 
+    
+}
+else
+{
+   while(!feof(arquivo))
      {
     
      selectLinha(arquivo,&produto);
@@ -150,6 +227,7 @@ void selectAll(int mostraMenu)
      qtdProduto++;
 
      }
+}
 
     if (mostraMenu)
         escolhaMenu();
@@ -172,9 +250,9 @@ void escolhaMenu(void)
     insereTraco(38,1);
     printf("| 3 |\tAtualização\n");
     insereTraco(38,1);
-    printf("| 4 |\tBusca por filtro\n");
-    insereTraco(38,1);
-    printf("| 5 |\tInventário\n");
+    printf("| 4 |\tExibir todos\n");
+     /*printf("| 5 |\tBusca por filtro\n");
+    insereTraco(38,1);*/ //falta a implementação
     insereTraco(38,1);
 
     scanf("%d",&opcao);
@@ -183,10 +261,10 @@ void escolhaMenu(void)
     switch(opcao)
     {
         case 1: insert();break;
-        case 2: delete();break;
+        case 2: delete(0);break;
         case 3: update();break;
-        case 4: selectWith();break;
-        case 5: selectAll(1);break;
+        case 4: selectAll(1);break;
+        //case 5: selectWith(1);break; falta a implementação
         default: exit(0);
     }
 }
